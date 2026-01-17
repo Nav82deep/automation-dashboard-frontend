@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { pagesAPI, promptsAPI, automationAPI } from '../api';
+import { pagesAPI, promptsAPI, automationAPI, driveAPI, manualAPI } from '../api';
 import '../App.css';
+import '../App.css';
+import ManualPostModal from '../components/ManualPostModal';
 
 function Pages() {
   const [pages, setPages] = useState([]);
   const [prompts, setPrompts] = useState([]);
+  const [driveFolders, setDriveFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingPage, setEditingPage] = useState(null);
@@ -21,8 +24,21 @@ function Pages() {
     times: ['09:00'],
     timezone: 'UTC',
     scheduleEnabled: true,
+    driveFolderId: '',
+    driveFolderName: '',
+    googleSheetId: '',
+    googleSheetRange: 'Sheet1!A:D',
     isActive: true,
   });
+
+  // Manual Post State
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualPageId, setManualPageId] = useState(null);
+
+  const openManualModal = (pageId) => {
+    setManualPageId(pageId);
+    setShowManualModal(true);
+  };
 
   useEffect(() => {
     loadData();
@@ -30,12 +46,17 @@ function Pages() {
 
   const loadData = async () => {
     try {
-      const [pagesRes, promptsRes] = await Promise.all([
+      const [pagesRes, promptsRes, foldersRes] = await Promise.all([
         pagesAPI.getAll(),
         promptsAPI.getAll(),
+        driveAPI.getFolders().catch(err => {
+          console.warn('Failed to load drive folders', err);
+          return { data: { data: [] } };
+        }),
       ]);
       setPages(pagesRes?.data?.data || []);
       setPrompts(promptsRes?.data?.data || []);
+      setDriveFolders(foldersRes?.data?.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       alert('Error loading data: ' + (error?.message || 'Unknown error'));
@@ -67,7 +88,7 @@ function Pages() {
   const handleEdit = (page) => {
     setEditingPage(page);
     const schedule = page.postingSchedule || {};
-    
+
     // Determine schedule type
     let scheduleType = 'interval';
     if (schedule.cronExpression) {
@@ -86,7 +107,12 @@ function Pages() {
       cronExpression: schedule.cronExpression || '',
       times: schedule.times || ['09:00'],
       timezone: schedule.timezone || 'UTC',
+      timezone: schedule.timezone || 'UTC',
       scheduleEnabled: schedule.enabled !== undefined ? schedule.enabled : true,
+      driveFolderId: page.driveFolderId || '',
+      driveFolderName: page.driveFolderName || '',
+      googleSheetId: page.googleSheetId || '',
+      googleSheetRange: page.googleSheetRange || 'Sheet1!A:D',
       isActive: page.isActive,
     });
     setShowModal(true);
@@ -113,7 +139,12 @@ function Pages() {
       cronExpression: '',
       times: ['09:00'],
       timezone: 'UTC',
+      timezone: 'UTC',
       scheduleEnabled: true,
+      driveFolderId: '',
+      driveFolderName: '',
+      googleSheetId: '',
+      googleSheetRange: 'Sheet1!A:D',
       isActive: true,
     });
   };
@@ -200,6 +231,23 @@ function Pages() {
     }
   };
 
+  const handleResetConsumedRows = async (page) => {
+    if (!page.googleSheetId) {
+      alert('This page is not linked to a Google Sheet.');
+      return;
+    }
+
+    if (!window.confirm(`Reset consumed rows for "${page.name}"? This will allow reusing rows from the beginning.`)) return;
+
+    try {
+      await pagesAPI.resetConsumedRows(page.pageId);
+      alert('Consumed rows reset successfully!');
+      loadData();
+    } catch (error) {
+      alert('Error resetting consumed rows: ' + error.message);
+    }
+  };
+
   if (loading) {
     return <div className="card">Loading...</div>;
   }
@@ -231,6 +279,7 @@ function Pages() {
               <th>Name</th>
               <th>Prompt</th>
               <th>Schedule</th>
+              <th>Sheet Info</th>
               <th>Status</th>
               <th>Last Posted</th>
               <th>Actions</th>
@@ -254,6 +303,28 @@ function Pages() {
                     {!page.postingSchedule?.enabled && ' (Disabled)'}
                   </td>
                   <td>
+                    {page.googleSheetId ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>Used: {page.consumedRows?.length || 0}</span>
+                        <button
+                          className="btn"
+                          onClick={() => handleResetConsumedRows(page)}
+                          style={{
+                            padding: '2px 6px',
+                            fontSize: '0.75rem',
+                            background: '#f59e0b',
+                            color: 'white'
+                          }}
+                          title="Reset consumed rows to start over"
+                        >
+                          🔄 Reset
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#999' }}>N/A</span>
+                    )}
+                  </td>
+                  <td>
                     <span className={`badge ${page.isActive ? 'badge-success' : 'badge-danger'}`}>
                       {page.isActive ? 'Active' : 'Inactive'}
                     </span>
@@ -266,11 +337,24 @@ function Pages() {
                   <td>
                     <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                       <button
+                        className="btn"
+                        onClick={() => openManualModal(page.pageId)}
+                        disabled={!page.isActive}
+                        style={{
+                          background: '#8b5cf6', color: 'white',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.875rem'
+                        }}
+                        title="Create One-Off Post manually"
+                      >
+                        ⚡ Manual
+                      </button>
+                      <button
                         className="btn btn-success"
                         onClick={() => handleSinglePagePost(page)}
                         disabled={postingPageId === page.pageId || !page.isActive}
-                        style={{ 
-                          padding: '0.25rem 0.5rem', 
+                        style={{
+                          padding: '0.25rem 0.5rem',
                           fontSize: '0.875rem',
                           opacity: postingPageId === page.pageId ? 0.6 : 1
                         }}
@@ -365,6 +449,60 @@ function Pages() {
                       </option>
                     ))}
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Google Drive Folder</label>
+                <select
+                  className="form-select"
+                  value={formData.driveFolderId}
+                  onChange={(e) => {
+                    const selectedFolder = driveFolders.find(f => f.id === e.target.value);
+                    setFormData({
+                      ...formData,
+                      driveFolderId: e.target.value,
+                      driveFolderName: selectedFolder ? selectedFolder.name : ''
+                    });
+                  }}
+                >
+                  <option value="">Select a folder (Optional)</option>
+                  {driveFolders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+                <small style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
+                  Images will be fetched from this folder if "Image Source" is set to "Google Drive" in the prompt.
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Google Sheet ID</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  value={formData.googleSheetId}
+                  onChange={(e) => setFormData({ ...formData, googleSheetId: e.target.value })}
+                  placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                />
+                <small style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
+                  Get this from your Google Sheet URL. Only needed if prompt's "Content Source" is set to "Google Sheet".
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Google Sheet Range</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  value={formData.googleSheetRange}
+                  onChange={(e) => setFormData({ ...formData, googleSheetRange: e.target.value })}
+                  placeholder="Sheet1!A:D"
+                />
+                <small style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
+                  Range to read (e.g., "Sheet1!A:D" for columns A-D). Row 1 is treated as header.
+                </small>
               </div>
 
               <div className="form-group">
@@ -527,11 +665,19 @@ function Pages() {
               </div>
             </form>
           </div>
-        </div>
-      )}
-    </div>
+        </div >
+      )
+      }
+
+      <ManualPostModal
+        isOpen={showManualModal}
+        onClose={() => setShowManualModal(false)}
+        pageId={manualPageId}
+      />
+    </div >
   );
 }
+
 
 export default Pages;
 

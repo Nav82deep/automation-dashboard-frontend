@@ -63,12 +63,12 @@ function Prompts() {
     e.preventDefault();
     try {
       const submitData = { ...formData };
-      
+
       // Only include statsOverlayConfig if type is celebrity_comparison
       if (submitData.type !== 'celebrity_comparison') {
         delete submitData.statsOverlayConfig;
       }
-      
+
       // Format imageConfig for news_collage
       if (submitData.type === 'news_collage') {
         submitData.imageConfig = {
@@ -82,7 +82,7 @@ function Prompts() {
         delete submitData.collageCount;
         delete submitData.layout;
       }
-      
+
       if (editingPrompt) {
         await promptsAPI.update(editingPrompt._id, submitData);
       } else {
@@ -96,7 +96,7 @@ function Prompts() {
       alert('Error saving prompt: ' + error.message);
     }
   };
-  
+
   const updateOverlayConfig = (key, value) => {
     setFormData({
       ...formData,
@@ -238,12 +238,11 @@ function Prompts() {
                   <td>{prompt.name}</td>
                   <td>
                     <div>
-                      <span className={`badge ${
-                        prompt.type === 'celebrity_comparison' ? 'badge-success' :
+                      <span className={`badge ${prompt.type === 'celebrity_comparison' ? 'badge-success' :
                         prompt.type === 'news_collage' ? 'badge-info' : 'badge-secondary'
-                      }`} style={{ fontSize: '0.75rem' }}>
+                        }`} style={{ fontSize: '0.75rem' }}>
                         {prompt.type === 'celebrity_comparison' ? 'Celebrity' :
-                         prompt.type === 'news_collage' ? 'News Collage' : prompt.type || 'General'}
+                          prompt.type === 'news_collage' ? 'News Collage' : prompt.type || 'General'}
                       </span>
                       <div style={{ fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>
                         {prompt.imageSource === 'real' ? '📷 Real' : '🎨 AI'}
@@ -364,9 +363,14 @@ function Prompts() {
                 >
                   <option value="real">Real Images (Google Search)</option>
                   <option value="ai">AI Generated (DALL-E)</option>
+                  <option value="drive">Google Drive (Page Specific)</option>
+                  <option value="google_sheet">Google Sheet (Names + Images from Sheet)</option>
                 </select>
                 <small style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
-                  Choose whether to use real images from Google or AI-generated images. Real images work best for celebrities and news.
+                  <strong>Real:</strong> AI picks celebrities, searches Google for images<br />
+                  <strong>AI:</strong> AI generates both celebrities and images<br />
+                  <strong>Drive:</strong> AI picks celebrities, gets images from your Drive folder<br />
+                  <strong>Google Sheet:</strong> Both celebrity names AND images come from linked sheet
                 </small>
               </div>
 
@@ -381,24 +385,24 @@ function Prompts() {
                     formData.type === 'celebrity_comparison'
                       ? "Compare Virat Kohli and MS Dhoni"
                       : formData.type === 'news_collage'
-                      ? "Create a news collage about recent tech developments and AI breakthroughs"
-                      : "Generate an engaging post about current trends"
+                        ? "Create a news collage about recent tech developments and AI breakthroughs"
+                        : "Generate an engaging post about current trends"
                   }
                   style={{ minHeight: '100px' }}
                 />
                 <small style={{ color: '#666', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
                   {formData.type === 'celebrity_comparison' ? (
                     <>
-                      <strong>Examples:</strong><br/>
-                      • "Compare Virat Kohli and MS Dhoni"<br/>
-                      • "Compare two Indian cricket team captains"<br/>
-                      • "Compare Pankaj Tripathi and Kay Kay Menon"<br/>
-                      • "Compare Shah Rukh Khan and Salman Khan"<br/>
-                      <br/>
+                      <strong>Examples:</strong><br />
+                      • "Compare Virat Kohli and MS Dhoni"<br />
+                      • "Compare two Indian cricket team captains"<br />
+                      • "Compare Pankaj Tripathi and Kay Kay Menon"<br />
+                      • "Compare Shah Rukh Khan and Salman Khan"<br />
+                      <br />
                       <strong>Keep it simple!</strong> Just specify which celebrities to compare. The system will automatically:
-                      <br/>- Find real images from Google
-                      <br/>- Generate stats for the metrics you specified
-                      <br/>- Create an engaging caption
+                      <br />- Find real images from Google
+                      <br />- Generate stats for the metrics you specified
+                      <br />- Create an engaging caption
                     </>
                   ) : formData.type === 'news_collage' ? (
                     'Describe the news topic or theme for the collage'

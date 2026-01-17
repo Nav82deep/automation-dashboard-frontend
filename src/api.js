@@ -17,6 +17,7 @@ export const pagesAPI = {
   create: (data) => api.post('/pages', data),
   update: (pageId, data) => api.put(`/pages/${pageId}`, data),
   delete: (pageId) => api.delete(`/pages/${pageId}`),
+  resetConsumedRows: (pageId) => api.post(`/pages/${pageId}/reset-consumed-rows`),
 };
 
 // Prompts API
@@ -39,6 +40,15 @@ export const automationAPI = {
   getStatus: () => api.get('/automation/status'),
   trigger: (pageId) => api.post('/automation/trigger', pageId ? { pageId } : {}),
   getExecutions: (limit) => api.get('/automation/executions', { params: { limit } }),
+};
+
+// Drive API
+export const driveAPI = {
+  getFolders: () => api.get('/drive/folders'),
+};
+
+export const manualAPI = {
+  create: (data) => api.post('/manual-post', data), // Using axios 'api' instance which already has base path
 };
 
 export default api;
