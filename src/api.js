@@ -18,6 +18,10 @@ export const pagesAPI = {
   update: (pageId, data) => api.put(`/pages/${pageId}`, data),
   delete: (pageId) => api.delete(`/pages/${pageId}`),
   resetConsumedRows: (pageId) => api.post(`/pages/${pageId}/reset-consumed-rows`),
+  bulkDisableSchedules: () => api.post('/pages/bulk-disable-schedules'),
+  bulkEnableSchedules: () => api.post('/pages/bulk-enable-schedules'),
+  bulkClearTimings: () => api.post('/pages/bulk-clear-timings'),
+  bulkResetConsumedRows: () => api.post('/pages/bulk-reset-consumed-rows'),
 };
 
 // Prompts API

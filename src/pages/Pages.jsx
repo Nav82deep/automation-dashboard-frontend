@@ -41,6 +41,19 @@ function Pages() {
   };
 
   useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.keyCode === 27) {
+        setShowModal(false);
+        setShowManualModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -211,6 +224,47 @@ function Pages() {
     }
   };
 
+  const handleToggleAllSchedules = async () => {
+    const isAnyEnabled = pages.some(p => p.postingSchedule?.enabled);
+    const action = isAnyEnabled ? 'disable' : 'enable';
+
+    if (!window.confirm(`Are you sure you want to ${action} schedules for ALL pages?`)) return;
+
+    try {
+      const res = isAnyEnabled
+        ? await pagesAPI.bulkDisableSchedules()
+        : await pagesAPI.bulkEnableSchedules();
+      alert(res.data.message);
+      loadData();
+    } catch (error) {
+      alert(`Error ${action}ing schedules: ` + error.message);
+    }
+  };
+
+  const handleClearAllTimings = async () => {
+    if (!window.confirm('Are you sure you want to clear saved times (intervals, cron, and times array) for ALL pages? scheduler status will remain unchanged.')) return;
+
+    try {
+      const res = await pagesAPI.bulkClearTimings();
+      alert(res.data.message);
+      loadData();
+    } catch (error) {
+      alert('Error clearing timings: ' + error.message);
+    }
+  };
+
+  const handleResetAllRows = async () => {
+    if (!window.confirm('Are you sure you want to reset consumed rows for ALL pages? This will start all sheets from Row 2 again.')) return;
+
+    try {
+      const res = await pagesAPI.bulkResetConsumedRows();
+      alert(res.data.message);
+      loadData();
+    } catch (error) {
+      alert('Error resetting all rows: ' + error.message);
+    }
+  };
+
   const handleSinglePagePost = async (page) => {
     if (!page.isActive) {
       alert('This page is not active. Please activate it first.');
@@ -257,14 +311,38 @@ function Pages() {
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Facebook Pages</h2>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <button
+              className={`btn ${pages.some(p => p.postingSchedule?.enabled) ? 'btn-danger' : 'btn-success'}`}
+              onClick={handleToggleAllSchedules}
+              disabled={pages.length === 0}
+              style={{ fontSize: '0.85rem' }}
+            >
+              {pages.some(p => p.postingSchedule?.enabled) ? 'Disable All Schedules' : 'Enable All Schedules'}
+            </button>
+            <button
+              className="btn btn-warning"
+              onClick={handleClearAllTimings}
+              disabled={pages.length === 0}
+              style={{ fontSize: '0.85rem' }}
+            >
+              Clear Saved Times
+            </button>
+            <button
+              className="btn"
+              onClick={handleResetAllRows}
+              disabled={pages.length === 0}
+              style={{ fontSize: '0.85rem', background: '#f97316', color: 'white' }}
+            >
+              Reset All Rows
+            </button>
             <button
               className="btn btn-success"
               onClick={handleQuickTrigger}
               disabled={triggering || pages.filter(p => p.isActive && p.postingSchedule?.enabled).length === 0}
               style={{ fontSize: '0.9rem' }}
             >
-              {triggering ? '⏳ Posting...' : '🚀 Post All Active'}
+              {triggering ? 'Posting...' : 'Post All Active'}
             </button>
             <button className="btn btn-primary" onClick={openAddModal}>
               + Add Page
@@ -275,11 +353,11 @@ function Pages() {
         <table className="table">
           <thead>
             <tr>
-              <th>Page ID</th>
               <th>Name</th>
               <th>Prompt</th>
               <th>Schedule</th>
-              <th>Sheet Info</th>
+              <th>Google Sheet</th>
+              <th>Consumed</th>
               <th>Status</th>
               <th>Last Posted</th>
               <th>Actions</th>
@@ -288,15 +366,25 @@ function Pages() {
           <tbody>
             {!pages || pages.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
                   No pages found. Add your first page!
                 </td>
               </tr>
             ) : (
               pages.map((page) => (
                 <tr key={page._id}>
-                  <td>{page.pageId}</td>
-                  <td>{page.name}</td>
+                  <td>
+                    <a
+                      href={`https://www.facebook.com/${page.pageId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary-color)', fontWeight: 'bold', textDecoration: 'none' }}
+                      onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                      onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                    >
+                      {page.name}
+                    </a>
+                  </td>
                   <td>{page.promptName || 'Not assigned'}</td>
                   <td>
                     {getScheduleDisplay(page)}
@@ -304,25 +392,35 @@ function Pages() {
                   </td>
                   <td>
                     {page.googleSheetId ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>Used: {page.consumedRows?.length || 0}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{page.googleSheetRange}</span>
+                        <span style={{ fontSize: '0.7rem', color: '#666', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={page.googleSheetId}>
+                          ID: {page.googleSheetId}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#999' }}>N/A</span>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 'bold' }}>{page.consumedRows?.length || 0}</span>
+                      {page.googleSheetId && (
                         <button
                           className="btn"
                           onClick={() => handleResetConsumedRows(page)}
                           style={{
                             padding: '2px 6px',
-                            fontSize: '0.75rem',
+                            fontSize: '0.7rem',
                             background: '#f59e0b',
                             color: 'white'
                           }}
                           title="Reset consumed rows to start over"
                         >
-                          🔄 Reset
+                          Reset
                         </button>
-                      </div>
-                    ) : (
-                      <span style={{ color: '#999' }}>N/A</span>
-                    )}
+                      )}
+                    </div>
                   </td>
                   <td>
                     <span className={`badge ${page.isActive ? 'badge-success' : 'badge-danger'}`}>
@@ -347,7 +445,7 @@ function Pages() {
                         }}
                         title="Create One-Off Post manually"
                       >
-                        ⚡ Manual
+                        Manual
                       </button>
                       <button
                         className="btn btn-success"
@@ -360,7 +458,7 @@ function Pages() {
                         }}
                         title={!page.isActive ? 'Page is not active' : 'Post to this page now'}
                       >
-                        {postingPageId === page.pageId ? '⏳ Posting...' : '📤 Post'}
+                        {postingPageId === page.pageId ? 'Posting...' : 'Post'}
                       </button>
                       <button
                         className="btn btn-primary"

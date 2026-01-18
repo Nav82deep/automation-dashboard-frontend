@@ -43,6 +43,18 @@ function Prompts() {
   const [showOverlayConfig, setShowOverlayConfig] = useState(false);
 
   useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.keyCode === 27) {
+        setShowModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -245,7 +257,7 @@ function Prompts() {
                           prompt.type === 'news_collage' ? 'News Collage' : prompt.type || 'General'}
                       </span>
                       <div style={{ fontSize: '0.7rem', color: '#999', marginTop: '0.25rem' }}>
-                        {prompt.imageSource === 'real' ? '📷 Real' : '🎨 AI'}
+                        {prompt.imageSource === 'real' ? 'Real' : 'AI'}
                       </div>
                     </div>
                   </td>

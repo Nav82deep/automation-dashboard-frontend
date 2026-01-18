@@ -17,12 +17,24 @@ const ManualPostModal = ({ isOpen, onClose, pageId }) => {
         }
     }, [pageId]);
 
+    useEffect(() => {
+        const handleEsc = (event) => {
+            if (event.keyCode === 27) {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+        };
+    }, [onClose]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
             await manualAPI.create(manualData);
-            alert('✅ Manual Post Created! It will appear on Facebook shortly.');
+            alert('Manual Post Created! It will appear on Facebook shortly.');
             setManualData({ ...manualData, celebrityA: '', urlA: '', celebrityB: '', urlB: '' });
             onClose(); // Close modal on success
         } catch (error) {
@@ -38,7 +50,7 @@ const ManualPostModal = ({ isOpen, onClose, pageId }) => {
         <div className="modal" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                 <div className="modal-header">
-                    <h3 className="modal-title">⚡ Create Manual Comparison Post</h3>
+                    <h3 className="modal-title">Create Manual Comparison Post</h3>
                     <button className="close-btn" onClick={onClose}>×</button>
                 </div>
                 <form onSubmit={handleSubmit}>
@@ -78,13 +90,13 @@ const ManualPostModal = ({ isOpen, onClose, pageId }) => {
                     </div>
 
                     <div style={{ background: '#fffbeb', padding: '0.5rem', fontSize: '0.8rem', color: '#92400e', borderRadius: '4px', marginBottom: '1rem' }}>
-            💡 Tip: Right-click image -> "Copy Image Address". Link should end in .jpg, .png or .webp
+                        Tip: Right-click image &rarr; "Copy Image Address". Link should end in .jpg, .png or .webp
                     </div>
 
                     <div className="modal-footer">
                         <button type="button" className="btn" onClick={onClose} style={{ background: '#ddd' }}>Cancel</button>
                         <button type="submit" className="btn btn-primary" disabled={loading} style={{ background: '#8b5cf6' }}>
-                            {loading ? 'Generating...' : '🚀 Post Now'}
+                            {loading ? 'Generating...' : 'Post Now'}
                         </button>
                     </div>
                 </form>
