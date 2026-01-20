@@ -401,6 +401,7 @@ function Pages() {
               <label
                 htmlFor="bulk-schedule-upload-input"
                 className="btn"
+                title="Only .csv files are supported. Export from Numbers/Excel as CSV."
                 style={{
                   fontSize: '0.85rem',
                   background: '#10b981',
