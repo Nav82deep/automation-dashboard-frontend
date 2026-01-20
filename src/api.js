@@ -22,6 +22,10 @@ export const pagesAPI = {
   bulkEnableSchedules: () => api.post('/pages/bulk-enable-schedules'),
   bulkClearTimings: () => api.post('/pages/bulk-clear-timings'),
   bulkResetConsumedRows: () => api.post('/pages/bulk-reset-consumed-rows'),
+  exportScheduleTemplate: () => api.get('/pages/export-schedule-template', { responseType: 'blob' }),
+  bulkUploadSchedule: (formData) => api.post('/pages/bulk-upload-schedule', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 // Prompts API

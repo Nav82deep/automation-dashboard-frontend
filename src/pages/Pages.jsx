@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { pagesAPI, promptsAPI, automationAPI, driveAPI, manualAPI } from '../api';
-import '../App.css';
 import '../App.css';
 import ManualPostModal from '../components/ManualPostModal';
 
@@ -9,6 +8,7 @@ function Pages() {
   const [prompts, setPrompts] = useState([]);
   const [driveFolders, setDriveFolders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef(null);
   const [showModal, setShowModal] = useState(false);
   const [editingPage, setEditingPage] = useState(null);
   const [triggering, setTriggering] = useState(false);
@@ -265,6 +265,51 @@ function Pages() {
     }
   };
 
+  const handleExportTemplate = async () => {
+    try {
+      const res = await pagesAPI.exportScheduleTemplate();
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'posting_schedule_template.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Error exporting template: ' + error.message);
+    }
+  };
+
+  const handleBulkUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file extension
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      alert('Error: Please upload a .csv file. The Numbers app file (.numbers) is not supported. Use "File" -> "Export To" -> "CSV" in Numbers.');
+      e.target.value = null;
+      return;
+    }
+
+    if (!window.confirm(`Upload "${file.name}" and update page schedules? Empty slots will be skipped.`)) {
+      e.target.value = null;
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await pagesAPI.bulkUploadSchedule(formData);
+      alert(res.data.message);
+      loadData();
+    } catch (error) {
+      alert('Error uploading schedule: ' + (error.response?.data?.error || error.message));
+    } finally {
+      e.target.value = null;
+    }
+  };
+
   const handleSinglePagePost = async (page) => {
     if (!page.isActive) {
       alert('This page is not active. Please activate it first.');
@@ -336,6 +381,39 @@ function Pages() {
             >
               Reset All Rows
             </button>
+            <button
+              className="btn"
+              onClick={handleExportTemplate}
+              disabled={pages.length === 0}
+              style={{ fontSize: '0.85rem', background: '#0a6ebd', color: 'white' }}
+            >
+              Export Schedule
+            </button>
+            <div style={{ display: 'inline-block' }}>
+              <input
+                type="file"
+                id="bulk-schedule-upload-input"
+                style={{ display: 'none' }}
+                accept=".csv"
+                onChange={handleBulkUpload}
+                disabled={!pages || pages.length === 0}
+              />
+              <label
+                htmlFor="bulk-schedule-upload-input"
+                className="btn"
+                style={{
+                  fontSize: '0.85rem',
+                  background: '#10b981',
+                  color: 'white',
+                  cursor: (!pages || pages.length === 0) ? 'not-allowed' : 'pointer',
+                  opacity: (!pages || pages.length === 0) ? 0.6 : 1,
+                  display: 'inline-block',
+                  userSelect: 'none'
+                }}
+              >
+                Upload Schedule
+              </label>
+            </div>
             <button
               className="btn btn-success"
               onClick={handleQuickTrigger}
